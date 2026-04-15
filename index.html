@@ -286,7 +286,7 @@ body{font-family:'Nunito',sans-serif;background:#1a1a2e;}
     <div id="scoreBox">🥬 0</div>
     <div id="timerBox">60s</div>
   </div>
-  <div id="heartsBox">❤️❤️❤️❤️❤️</div>
+  <div id="heartsBox">⚡⚡⚡⚡⚡</div>
 </div>
 
 <!-- ═══ GAME OVER ═══ -->
@@ -487,8 +487,8 @@ function hit(ax,ay,bx,by,dist){
 /* ── Hearts HUD ──────────────────────────────── */
 function renderHeartsEl(){
   heartsEl.textContent=
-    "❤️".repeat(state.hearts)+
-    "🖤".repeat(Math.max(0,MAX_HEARTS-state.hearts));
+    "⚡".repeat(state.hearts)+
+    "🔋".repeat(Math.max(0,MAX_HEARTS-state.hearts));
 }
 
 /* ── Loop ────────────────────────────────────── */
@@ -600,16 +600,21 @@ function draw(){
   const pSize=W*PLAYER_W*1.15;
 
   // Sky
+  ctx.save();
   const sky=ctx.createLinearGradient(0,0,0,H);
   sky.addColorStop(0,"#0f172a"); sky.addColorStop(1,"#1e3a1e");
   ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+  ctx.restore();
 
   // Grass
+  ctx.save();
   ctx.fillStyle="#14532d";
   ctx.fillRect(0,0,RL,H);
   ctx.fillRect(RR,0,W-RR,H);
+  ctx.restore();
 
   // Grass texture
+  ctx.save();
   ctx.strokeStyle="rgba(34,197,94,0.14)"; ctx.lineWidth=2;
   const offY=(s.roadY*0.4)%60;
   for(let i=0;i<10;i++){
@@ -619,65 +624,78 @@ function draw(){
       ctx.beginPath();ctx.moveTo(rx,j*60+offY);ctx.lineTo(rx-9,j*60+offY+26);ctx.stroke();
     }
   }
+  ctx.restore();
 
   // Road
+  ctx.save();
   const rg=ctx.createLinearGradient(RL,0,RR,0);
   rg.addColorStop(0,"#374151"); rg.addColorStop(.5,"#4b5563"); rg.addColorStop(1,"#374151");
   ctx.fillStyle=rg; ctx.fillRect(RL,0,RW,H);
+  ctx.restore();
 
   // Ground patches
+  ctx.save();
   ctx.fillStyle="rgba(255,255,255,0.020)";
   for(let i=0;i<s.stripes.length;i++){
     const sx=laneX(s.stripes[i].lane);
     ctx.beginPath(); ctx.ellipse(sx,s.stripes[i].y,RW*0.063,8,0,0,Math.PI*2); ctx.fill();
   }
+  ctx.restore();
 
-  // Lane dashes
+  // Lane dashes — clamp lineDashOffset to prevent integer overflow on long runs
+  ctx.save();
   ctx.strokeStyle="rgba(250,204,21,0.48)"; ctx.lineWidth=3;
   ctx.setLineDash([28,26]);
+  const dashOffset = s.roadY % 54; // 54 = 28+26, keeps value tiny forever
   for(let l=1;l<LANE_COUNT;l++){
     const lx=RL+(l/LANE_COUNT)*RW;
-    ctx.beginPath(); ctx.lineDashOffset=-s.roadY;
+    ctx.beginPath(); ctx.lineDashOffset=-dashOffset;
     ctx.moveTo(lx,0); ctx.lineTo(lx,H); ctx.stroke();
   }
-  ctx.setLineDash([]);
+  ctx.restore(); // restore clears setLineDash back to []
 
   // Road edges
+  ctx.save();
   ctx.strokeStyle="#22c55e"; ctx.lineWidth=4;
   ctx.beginPath();ctx.moveTo(RL,0);ctx.lineTo(RL,H);ctx.stroke();
   ctx.beginPath();ctx.moveTo(RR,0);ctx.lineTo(RR,H);ctx.stroke();
+  ctx.restore();
 
   // Hit flash overlay
   if(s.hitFlash>0){
+    ctx.save();
     ctx.fillStyle=`rgba(239,68,68,${(s.hitFlash/FLASH_FRAMES)*0.28})`;
     ctx.fillRect(0,0,W,H);
+    ctx.restore();
   }
 
   // Obstacles
   s.obstacles.forEach(o=>{
+    ctx.save();
     const ox=o.x*W, oy=o.y*H;
     const ow=W*OBS_W, oh=H*OBS_H*0.66;
     ctx.fillStyle="#7f1d1d";
     ctx.beginPath(); roundRect(ctx,ox-ow/2,oy-oh/2,ow,oh,10); ctx.fill();
-    ctx.shadowColor="rgba(0,0,0,0.5)"; ctx.shadowBlur=8;
     ctx.font=`${oh*0.8}px serif`;
     ctx.textAlign="center"; ctx.textBaseline="middle";
     ctx.fillText("🪨",ox,oy);
-    ctx.shadowBlur=0;
+    ctx.restore();
   });
 
   // Items
   s.items.forEach(it=>{
+    ctx.save();
     const emoji=it.type==="cabbage"?"🥬":it.type==="wind"?"💨":"🍔";
     ctx.font=`${iSize}px serif`;
     ctx.textAlign="center"; ctx.textBaseline="middle";
     ctx.shadowColor=it.type==="cabbage"?"#22c55e":it.type==="burger"?"#ef4444":"#60a5fa";
     ctx.shadowBlur=14;
     ctx.fillText(emoji,it.x*W,it.y*H);
-    ctx.shadowBlur=0;
+    ctx.restore();
   });
 
-  // Player ground shadow (ellipse beneath feet)
+  // Player ground shadow
+  ctx.save();
   const shadowGrad = ctx.createRadialGradient(
     s.px*W, playerY*H+pSize*0.44, 0,
     s.px*W, playerY*H+pSize*0.44, pSize*0.38
@@ -688,21 +706,21 @@ function draw(){
   ctx.beginPath();
   ctx.ellipse(s.px*W, playerY*H+pSize*0.44, pSize*0.38, pSize*0.12, 0, 0, Math.PI*2);
   ctx.fill();
+  ctx.restore();
 
   // Player image (fallback emoji)
+  ctx.save();
   if(imgPlayer.complete && imgPlayer.naturalWidth>0){
-    // subtle green glow behind the character
     ctx.shadowColor="rgba(34,197,94,0.55)";
     ctx.shadowBlur=22;
     ctx.drawImage(imgPlayer, s.px*W-pSize/2, playerY*H-pSize/2, pSize, pSize);
-    ctx.shadowBlur=0;
   } else {
     ctx.font=`${pSize}px serif`;
     ctx.textAlign="center"; ctx.textBaseline="middle";
     ctx.shadowColor="rgba(34,197,94,0.6)"; ctx.shadowBlur=18;
     ctx.fillText("🏃",s.px*W,playerY*H);
-    ctx.shadowBlur=0;
   }
+  ctx.restore();
 
   // Timer colour
   if(s.timeLeft<=10){
@@ -754,17 +772,17 @@ function endGame(reason){
     document.getElementById("goSubtitle").textContent="Your Player is Obese, Can't Run Anymore";
     document.getElementById("goImg").src=imgSad.src;
   } else {
-    if(sc>=1&&sc<=5){
+    if(sc>=1&&sc<=10){
       currentResultType="malnourished";
       document.getElementById("goTitle").textContent="Time's Up!";
       document.getElementById("goSubtitle").textContent="Eat More Next Time";
       document.getElementById("goImg").src=imgSad.src;
-    } else if(sc>=6&&sc<=15){
+    } else if(sc>=11&&sc<=20){
       currentResultType="normal";
       document.getElementById("goTitle").textContent="Time's Up!";
       document.getElementById("goSubtitle").textContent="Good Job! 👍";
       document.getElementById("goImg").src=imgNormal.src;
-    } else if(sc>=16){
+    } else if(sc>=21){
       currentResultType="fit";
       document.getElementById("goTitle").textContent="Time's Up!";
       document.getElementById("goSubtitle").textContent="You are Winning in Life! 🌟";
